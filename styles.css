@@ -1,0 +1,102 @@
+#mlsa-toolbar {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 68px;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #242629;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-left: 4px solid #3483fa;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-family: Proxima Nova, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.mlsa-title-group,
+.mlsa-actions {
+  display: flex;
+  align-items: center;
+}
+
+.mlsa-title-group { gap: 10px; min-width: 220px; }
+.mlsa-title-group strong { display: block; font-size: 15px; line-height: 20px; }
+.mlsa-title-group small { display: block; margin-top: 2px; color: #6b6f75; font-size: 12px; line-height: 16px; }
+#mlsa-rate { color: #147d74; }
+
+.mlsa-mark {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 32px;
+  color: #fff;
+  background: #3483fa;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.mlsa-actions { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.mlsa-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: #3483fa;
+  background: #fff;
+  border: 1px solid #3483fa;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mlsa-actions button:hover { background: #f1f6ff; }
+.mlsa-actions button.is-active { color: #fff; background: #3483fa; }
+.mlsa-actions .mlsa-export-button { color: #fff; background: #147d74; border-color: #147d74; }
+.mlsa-actions .mlsa-export-button:hover { background: #10665f; }
+.mlsa-actions .mlsa-export-button:disabled { cursor: wait; opacity: .72; }
+
+.mlsa-badge {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  min-height: 28px;
+  margin: 12px 12px 0;
+  padding: 5px 9px;
+  color: #1f6b3a;
+  background: #e9f7ef;
+  border: 1px solid #b9e2c8;
+  border-radius: 5px;
+  font: 600 13px/17px Proxima Nova, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.mlsa-badge-line { display: block; }
+.mlsa-badge-line + .mlsa-badge-line { margin-top: 2px; }
+.mlsa-badge-main { font-weight: 700; }
+.mlsa-badge-category { color: #245e8a; }
+.mlsa-badge-recent { color: #6b5b00; font-size: 12px; font-weight: 600; }
+.mlsa-badge-flag { margin-bottom: 3px; color: #8a4a16; font-size: 11px; text-transform: uppercase; }
+.mlsa-badge[data-state="loading"],
+.mlsa-badge[data-state="pending"] { color: #765b00; background: #fff8dc; border-color: #efdb8d; }
+.mlsa-badge[data-state="unavailable"] { color: #5f6368; background: #f5f5f5; border-color: #ddd; }
+.mlsa-badge[data-state="error"] { color: #9d2a2a; background: #fff0f0; border-color: #efc4c4; }
+
+.mlsa-cny-price {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 4px;
+  color: #147d74;
+  font: 600 13px/18px Proxima Nova, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.mlsa-cny-price[data-state="loading"] { color: #6b6f75; font-weight: 500; }
+.mlsa-cny-price[data-state="error"] { color: #9d2a2a; font-weight: 500; }
+.mlsa-cny-price[data-state="stale"] { color: #7a6500; }
+
+@media (max-width: 760px) {
+  #mlsa-toolbar { align-items: flex-start; flex-direction: column; }
+  .mlsa-actions { width: 100%; justify-content: flex-start; }
+  .mlsa-actions button { flex: 1 1 auto; }
+}

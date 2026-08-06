@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "美客多销量助手",
+  "version": "1.3.5",
+  "description": "显示美客多累计销量档位、近30天公开销量或快照增量、人民币换算、准确排名并导出Excel。",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://*.mercadolivre.com.br/*",
+    "https://*.mercadolibre.com/*",
+    "https://*.mercadolibre.com.mx/*",
+    "https://*.mercadolibre.com.ar/*",
+    "https://*.mercadolibre.cl/*",
+    "https://*.mercadolibre.com.co/*",
+    "https://*.mercadolibre.com.pe/*",
+    "https://*.mlstatic.com/*",
+    "https://api.frankfurter.dev/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "美客多销量助手",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.mercadolivre.com.br/*",
+        "https://*.mercadolibre.com/*",
+        "https://*.mercadolibre.com.mx/*",
+        "https://*.mercadolibre.com.ar/*",
+        "https://*.mercadolibre.cl/*",
+        "https://*.mercadolibre.com.co/*",
+        "https://*.mercadolibre.com.pe/*"
+      ],
+      "js": ["vendor/exceljs.min.js", "currency.js", "export-utils.js", "excel-export.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

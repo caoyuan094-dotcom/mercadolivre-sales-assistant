@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>美客多销量助手</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <div class="brand"><span>销</span><strong>美客多销量助手</strong></div>
+      <p>打开美客多搜索结果页，插件会读取累计销量档位、近30天公开销量或本机观察增量，并提供多种排序。</p>
+      <label class="setting">
+        <span><strong>自动换算人民币</strong><small>识别当前站点币种，在原价旁显示人民币参考价</small></span>
+        <input id="exchange-enabled" type="checkbox" checked>
+      </label>
+      <div class="rate-card">
+        <span id="rate-status">正在读取当前站点汇率…</span>
+        <button id="refresh-rate" class="secondary" type="button">刷新汇率</button>
+      </div>
+      <div class="notice"><strong>口径说明</strong>“+1 mil”等为档位下限，同档位并列。平台未公开近30天数值时，插件从首次使用起保存每日快照，满30天后计算观察增量。</div>
+      <button id="export-top20" class="export" type="button">导出当前关键词前20名</button>
+      <button id="refresh" type="button">刷新销量与30天趋势</button>
+      <p id="message" role="status"></p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
