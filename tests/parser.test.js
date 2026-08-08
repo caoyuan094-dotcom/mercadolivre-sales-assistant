@@ -9,7 +9,7 @@ const { detectCurrency, parseLocalizedPrice, formatCny } = require("../currency.
 const { compareSignatures } = require("../image-similarity.js");
 const {
   parseRating, parseReviewCount, sanitizeFilename, extractListingId, canonicalProductKey,
-  selectBestProductUrl, resolveSortLayout, rankItems, buildPagedSearchUrl
+  selectBestProductUrl, resolveSortLayout, rankItems, buildPagedSearchUrl, parseResultCount
 } = require("../export-utils.js");
 
 assert.equal(parseLocalizedNumber("500"), 500);
@@ -123,6 +123,9 @@ assert.equal(
   buildPagedSearchUrl("https://lista.mercadolivre.com.br/carrinho-de-bebe", 49),
   "https://lista.mercadolivre.com.br/carrinho-de-bebe_Desde_49_NoIndex_True"
 );
+assert.equal(parseResultCount("Mais de 10.000 resultados"), 10000);
+assert.equal(parseResultCount("1.234 produtos"), 1234);
+assert.equal(parseResultCount("Carrinhos de bebê"), null);
 assert.equal(
   buildPagedSearchUrl("https://lista.mercadolivre.com.br/carrinho-de-bebe_Desde_49_NoIndex_True?sb=all", 97),
   "https://lista.mercadolivre.com.br/carrinho-de-bebe_Desde_97_NoIndex_True?sb=all"

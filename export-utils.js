@@ -123,6 +123,13 @@
     } catch { return null; }
   }
 
+  function parseResultCount(value) {
+    const match = String(value || "").match(/(?:mais\s+de\s+|más\s+de\s+)?([\d.,]+)\s+(?:resultados?|produtos?|productos?)/i);
+    if (!match) return null;
+    const count = Number(match[1].replace(/[.,]/g, ""));
+    return Number.isFinite(count) && count > 0 ? count : null;
+  }
+
   function tieBreaker(a, b) {
     const categoryA = Number.isFinite(a.categoryRank) ? a.categoryRank : Number.MAX_SAFE_INTEGER;
     const categoryB = Number.isFinite(b.categoryRank) ? b.categoryRank : Number.MAX_SAFE_INTEGER;
@@ -160,6 +167,6 @@
 
   return {
     parseRating, parseReviewCount, sanitizeFilename, extractListingId, canonicalProductKey,
-    selectBestProductUrl, resolveSortLayout, runWorkerPool, rankItems, buildPagedSearchUrl
+    selectBestProductUrl, resolveSortLayout, runWorkerPool, rankItems, buildPagedSearchUrl, parseResultCount
   };
 });

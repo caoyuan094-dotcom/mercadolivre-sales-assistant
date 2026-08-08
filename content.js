@@ -13,7 +13,7 @@
     sortMessage: "", currency: MLSACurrency.detectCurrency(location.hostname, document.body.innerText),
     exchangeEnabled: true, exchange: null, exchangeStatus: "loading",
     imageSearch: { running: false, compared: 0, total: 0, reference: null, preview: null },
-    fullCatalog: { running: false, phase: "idle", pages: 0, items: [], completed: 0 }
+    fullCatalog: { running: false, phase: "idle", pages: 0, items: [], completed: 0, expectedTotal: null, endedBy: null }
   };
   let scanTimer;
   let lastUrl = location.href;
@@ -46,7 +46,7 @@
         STATE.sortMessage = "";
         STATE.completed = 0;
         STATE.imageSearch = { running: false, compared: 0, total: 0, reference: null, preview: null };
-        STATE.fullCatalog = { running: false, phase: "idle", pages: 0, items: [], completed: 0 };
+        STATE.fullCatalog = { running: false, phase: "idle", pages: 0, items: [], completed: 0, expectedTotal: null, endedBy: null };
       }
       clearTimeout(scanTimer);
       scanTimer = setTimeout(scanPage, 450);
@@ -390,7 +390,10 @@
   async function collectFullCatalog() {
     if (STATE.fullCatalog.running) return;
     const button = document.getElementById("mlsa-full-catalog");
-    STATE.fullCatalog = { running: true, phase: "pages", pages: 1, items: [], completed: 0 };
+    STATE.fullCatalog = {
+      running: true, phase: "pages", pages: 1, items: [], completed: 0,
+      expectedTotal: MLSAExport.parseResultCount(document.body.innerText), endedBy: null
+    };
     STATE.sortMessage = "正在汇总第1页商品";
     if (button) { button.disabled = true; button.textContent = "扫描第1页…"; }
     updateToolbar();
@@ -406,17 +409,18 @@
     while (STATE.fullCatalog.pages < 200) {
       const nextUrl = findNextPageUrl(pageDocument, pageUrl)
         || MLSAExport.buildPagedSearchUrl(firstPageUrl, STATE.fullCatalog.pages * pageStride + 1);
-      if (!nextUrl || visitedPages.has(normalizePageUrl(nextUrl))) break;
+      if (!nextUrl) { STATE.fullCatalog.endedBy = "no-next"; break; }
+      if (visitedPages.has(normalizePageUrl(nextUrl))) { STATE.fullCatalog.endedBy = "repeated-page"; break; }
       const response = await chrome.runtime.sendMessage({ type: "MLSA_FETCH_SEARCH_PAGE", url: nextUrl });
       if (response?.status !== "ok") throw new Error(response?.error || "下一页读取失败");
       pageUrl = response.url || nextUrl;
       visitedPages.add(normalizePageUrl(pageUrl));
       pageDocument = new DOMParser().parseFromString(response.html, "text/html");
       const pageItems = extractCatalogItems(pageDocument, pageUrl, itemMap.size);
-      if (!pageItems.length) break;
+      if (!pageItems.length) { STATE.fullCatalog.endedBy = "empty-page"; break; }
       const previousSize = itemMap.size;
       pageItems.forEach((item) => addCatalogItem(itemMap, item));
-      if (itemMap.size === previousSize) break;
+      if (itemMap.size === previousSize) { STATE.fullCatalog.endedBy = "no-new-items"; break; }
       STATE.fullCatalog.pages += 1;
       STATE.sortMessage = `已扫描 ${STATE.fullCatalog.pages} 页，共 ${itemMap.size} 个自然商品`;
       if (button) button.textContent = `${STATE.fullCatalog.pages}页 · ${itemMap.size}款`;
@@ -425,7 +429,10 @@
 
     const remainingPage = findNextPageUrl(pageDocument, pageUrl)
       || MLSAExport.buildPagedSearchUrl(firstPageUrl, STATE.fullCatalog.pages * pageStride + 1);
-    if (STATE.fullCatalog.pages >= 200 && remainingPage) throw new Error("搜索结果超过200页，为避免无限循环已暂停");
+    if (STATE.fullCatalog.pages >= 200 && remainingPage) {
+      STATE.fullCatalog.endedBy = "page-limit";
+      throw new Error("搜索结果超过200页，为避免无限循环已暂停");
+    }
 
     const items = Array.from(itemMap.values());
     STATE.fullCatalog.items = items;
@@ -435,11 +442,26 @@
     updateToolbar();
 
     await MLSAExport.runWorkerPool(items, SALES_WORKERS, async (item) => {
-      if (item.status !== "ok") {
-        try {
-          const result = await chrome.runtime.sendMessage({ type: "MLSA_FETCH_SALES", url: item.link, force: false });
-          applySalesResult(item, result);
-        } catch { item.status = "error"; item.sales = null; }
+      const cardSales = Number.isFinite(item.sales) ? item.sales : null;
+      const cardLowerBound = Boolean(item.salesIsLowerBound);
+      try {
+        const result = await chrome.runtime.sendMessage({ type: "MLSA_FETCH_SALES", url: item.link, force: false });
+        if (result?.status === "ok") applySalesResult(item, result);
+        else if (cardSales != null) {
+          item.status = "ok";
+          item.sales = cardSales;
+          item.salesIsLowerBound = cardLowerBound;
+          item.salesSource = "search-card";
+          item.detailStatus = result?.status || "error";
+        } else applySalesResult(item, result);
+      } catch {
+        if (cardSales != null) {
+          item.status = "ok";
+          item.sales = cardSales;
+          item.salesIsLowerBound = cardLowerBound;
+          item.salesSource = "search-card";
+          item.detailStatus = "error";
+        } else { item.status = "error"; item.sales = null; }
       }
       STATE.fullCatalog.completed += 1;
       if (button) button.textContent = `销量 ${STATE.fullCatalog.completed}/${items.length}`;
@@ -454,7 +476,8 @@
     });
     STATE.fullCatalog.running = false;
     STATE.fullCatalog.phase = "done";
-    STATE.sortMessage = `全量完成：${STATE.fullCatalog.pages} 页，${items.length} 个自然商品`;
+    const summary = getFullCatalogSummary();
+    STATE.sortMessage = `${summary.coverageLabel}：${STATE.fullCatalog.pages}页，发现${items.length}个，销量成功${summary.known}`;
     if (button) { button.disabled = false; button.textContent = `查看全量榜单 (${items.length})`; }
     updateToolbar();
     openFullRanking();
@@ -536,6 +559,7 @@
     if (result?.status !== "ok") { item.sales = null; return; }
     Object.assign(item, {
       sales: result.sales,
+      salesSource: "product-page",
       salesIsLowerBound: Boolean(result.salesIsLowerBound),
       recent30: result.recent30 ?? null,
       recent30IsLowerBound: Boolean(result.recent30IsLowerBound),
@@ -549,27 +573,49 @@
 
   function openFullRanking() {
     document.getElementById("mlsa-full-ranking")?.remove();
-    const ranked = MLSAExport.rankItems(STATE.fullCatalog.items, "sales-desc");
+    const knownItems = STATE.fullCatalog.items.filter((item) => Number.isFinite(item.sales));
+    const unknownItems = STATE.fullCatalog.items.filter((item) => !Number.isFinite(item.sales));
+    const ranked = [
+      ...MLSAExport.rankItems(knownItems, "sales-desc"),
+      ...MLSAExport.rankItems(unknownItems, "original")
+    ];
+    const summary = getFullCatalogSummary();
     const panel = document.createElement("section");
     panel.id = "mlsa-full-ranking";
-    panel.innerHTML = `<div class="mlsa-ranking-head"><div><strong>全部搜索结果销量榜单</strong><small>${STATE.fullCatalog.pages} 页 · ${ranked.length} 个自然商品 · 累计销量档位排序</small></div><button type="button" aria-label="关闭榜单">×</button></div><div class="mlsa-ranking-scroll"><table><thead><tr><th>排名</th><th>商品</th><th>累计销量</th><th>价格</th><th>官方类目排名</th></tr></thead><tbody></tbody></table></div>`;
+    panel.innerHTML = `<div class="mlsa-ranking-head"><div><strong>全部搜索结果销量榜单</strong><small>${summary.coverageLabel} · 页面标称 ${summary.expectedLabel} · 实际发现 ${ranked.length} · 销量成功 ${summary.known} · 未公开 ${summary.unavailable} · 失败 ${summary.errors}</small></div><button type="button" aria-label="关闭榜单">×</button></div><div class="mlsa-ranking-scroll"><table><thead><tr><th>销量排名</th><th>商品</th><th>累计销量</th><th>价格</th><th>数据状态</th></tr></thead><tbody></tbody></table></div>`;
     panel.querySelector("button").addEventListener("click", () => panel.remove());
     const body = panel.querySelector("tbody");
     ranked.forEach((item, index) => {
       const row = document.createElement("tr");
-      const rank = Number.isFinite(item.globalSalesRank) ? item.globalSalesRank : index + 1;
+      const rank = Number.isFinite(item.globalSalesRank) ? item.globalSalesRank : null;
       row.innerHTML = `<td></td><td><a target="_blank" rel="noopener"><img loading="lazy"><span></span></a></td><td></td><td></td><td></td>`;
-      row.children[0].textContent = String(rank);
+      row.children[0].textContent = rank ? String(rank) : "-";
       const link = row.querySelector("a");
       link.href = item.link;
       link.querySelector("img").src = item.imageUrl || "";
       link.querySelector("span").textContent = item.title || "未识别名称";
       row.children[2].textContent = Number.isFinite(item.sales) ? `${item.salesIsLowerBound ? "≥" : ""}${formatInteger(item.sales)}` : "未公开";
       row.children[3].textContent = Number.isFinite(item.price) ? `${STATE.currency || ""} ${item.price.toLocaleString("zh-CN")}` : "-";
-      row.children[4].textContent = item.categoryRank ? `第 ${item.categoryRank} 名` : "-";
+      row.children[4].textContent = item.status === "ok"
+        ? item.salesSource === "search-card" ? "搜索卡片公开值" : "详情页公开值"
+        : item.status === "unavailable" ? "销量未公开" : "读取失败";
       body.appendChild(row);
     });
     document.body.appendChild(panel);
+  }
+
+  function getFullCatalogSummary() {
+    const items = STATE.fullCatalog.items;
+    const known = items.filter((item) => Number.isFinite(item.sales)).length;
+    const unavailable = items.filter((item) => item.status === "unavailable").length;
+    const errors = items.filter((item) => item.status === "error").length;
+    const expected = STATE.fullCatalog.expectedTotal;
+    const countVerified = Number.isFinite(expected) && items.length >= expected;
+    return {
+      known, unavailable, errors,
+      expectedLabel: Number.isFinite(expected) ? formatInteger(expected) : "未公开",
+      coverageLabel: countVerified ? "数量校验通过" : Number.isFinite(expected) ? "未达到页面标称总数" : "已读取平台可访问分页"
+    };
   }
 
   async function refreshSales(button) {
