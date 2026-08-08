@@ -9,7 +9,7 @@ const { detectCurrency, parseLocalizedPrice, formatCny } = require("../currency.
 const { compareSignatures } = require("../image-similarity.js");
 const {
   parseRating, parseReviewCount, sanitizeFilename, extractListingId, canonicalProductKey,
-  selectBestProductUrl, resolveSortLayout, rankItems
+  selectBestProductUrl, resolveSortLayout, rankItems, buildPagedSearchUrl
 } = require("../export-utils.js");
 
 assert.equal(parseLocalizedNumber("500"), 500);
@@ -119,6 +119,14 @@ const imageRanked = rankItems([
   { originalIndex: 2, imageSimilarity: null }
 ], "image-similarity");
 assert.deepEqual(imageRanked.map((item) => item.imageSimilarity), [0.91, 0.42, null]);
+assert.equal(
+  buildPagedSearchUrl("https://lista.mercadolivre.com.br/carrinho-de-bebe", 49),
+  "https://lista.mercadolivre.com.br/carrinho-de-bebe_Desde_49_NoIndex_True"
+);
+assert.equal(
+  buildPagedSearchUrl("https://lista.mercadolivre.com.br/carrinho-de-bebe_Desde_49_NoIndex_True?sb=all", 97),
+  "https://lista.mercadolivre.com.br/carrinho-de-bebe_Desde_97_NoIndex_True?sb=all"
+);
 
 const unchanged = computeObservedTrend([
   { date: "2026-07-01", sales: 1000, salesIsLowerBound: true },

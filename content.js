@@ -397,12 +397,15 @@
 
     const itemMap = new Map();
     STATE.cards.filter((item) => !item.sponsored).forEach((item) => addCatalogItem(itemMap, toPortableItem(item)));
+    const pageStride = 48;
+    const firstPageUrl = location.href;
     let pageDocument = document;
     let pageUrl = location.href;
     const visitedPages = new Set([normalizePageUrl(pageUrl)]);
 
     while (STATE.fullCatalog.pages < 200) {
-      const nextUrl = findNextPageUrl(pageDocument, pageUrl);
+      const nextUrl = findNextPageUrl(pageDocument, pageUrl)
+        || MLSAExport.buildPagedSearchUrl(firstPageUrl, STATE.fullCatalog.pages * pageStride + 1);
       if (!nextUrl || visitedPages.has(normalizePageUrl(nextUrl))) break;
       const response = await chrome.runtime.sendMessage({ type: "MLSA_FETCH_SEARCH_PAGE", url: nextUrl });
       if (response?.status !== "ok") throw new Error(response?.error || "下一页读取失败");
@@ -410,15 +413,18 @@
       visitedPages.add(normalizePageUrl(pageUrl));
       pageDocument = new DOMParser().parseFromString(response.html, "text/html");
       const pageItems = extractCatalogItems(pageDocument, pageUrl, itemMap.size);
-      if (!pageItems.length) throw new Error(`第${STATE.fullCatalog.pages + 1}页没有识别到商品，可能需要重新登录`);
+      if (!pageItems.length) break;
+      const previousSize = itemMap.size;
       pageItems.forEach((item) => addCatalogItem(itemMap, item));
+      if (itemMap.size === previousSize) break;
       STATE.fullCatalog.pages += 1;
       STATE.sortMessage = `已扫描 ${STATE.fullCatalog.pages} 页，共 ${itemMap.size} 个自然商品`;
       if (button) button.textContent = `${STATE.fullCatalog.pages}页 · ${itemMap.size}款`;
       updateToolbar();
     }
 
-    const remainingPage = findNextPageUrl(pageDocument, pageUrl);
+    const remainingPage = findNextPageUrl(pageDocument, pageUrl)
+      || MLSAExport.buildPagedSearchUrl(firstPageUrl, STATE.fullCatalog.pages * pageStride + 1);
     if (STATE.fullCatalog.pages >= 200 && remainingPage) throw new Error("搜索结果超过200页，为避免无限循环已暂停");
 
     const items = Array.from(itemMap.values());

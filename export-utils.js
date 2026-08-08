@@ -111,6 +111,18 @@
     });
   }
 
+  function buildPagedSearchUrl(value, offset) {
+    try {
+      const url = new URL(value);
+      const cleanPath = url.pathname
+        .replace(/_Desde_\d+(?:_NoIndex_True)?\/?$/i, "")
+        .replace(/\/$/, "");
+      url.pathname = `${cleanPath}_Desde_${Math.max(1, Math.floor(offset))}_NoIndex_True`;
+      url.hash = "";
+      return url.href;
+    } catch { return null; }
+  }
+
   function tieBreaker(a, b) {
     const categoryA = Number.isFinite(a.categoryRank) ? a.categoryRank : Number.MAX_SAFE_INTEGER;
     const categoryB = Number.isFinite(b.categoryRank) ? b.categoryRank : Number.MAX_SAFE_INTEGER;
@@ -148,6 +160,6 @@
 
   return {
     parseRating, parseReviewCount, sanitizeFilename, extractListingId, canonicalProductKey,
-    selectBestProductUrl, resolveSortLayout, runWorkerPool, rankItems
+    selectBestProductUrl, resolveSortLayout, runWorkerPool, rankItems, buildPagedSearchUrl
   };
 });
