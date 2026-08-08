@@ -106,7 +106,7 @@
     return Array.from(items || []).filter((item) => !item.sponsored).sort((a, b) => {
       if (sortMode === "original") return a.originalIndex - b.originalIndex;
       if (sortMode === "category-rank") return compareNullableAscending(a.categoryRank, b.categoryRank) || tieBreaker(a, b);
-      const key = sortMode === "recent-desc" ? "recent30" : "sales";
+      const key = sortMode === "recent-desc" ? "recent30" : sortMode === "image-similarity" ? "imageSimilarity" : "sales";
       return compareNullableDescending(a[key], b[key]) || tieBreaker(a, b);
     });
   }

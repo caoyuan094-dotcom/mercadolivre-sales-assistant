@@ -6,6 +6,7 @@ const {
   parseLocalizedNumber, computeObservedTrend, isCurrency, isAllowedImageUrl
 } = require("../background.js");
 const { detectCurrency, parseLocalizedPrice, formatCny } = require("../currency.js");
+const { compareSignatures } = require("../image-similarity.js");
 const {
   parseRating, parseReviewCount, sanitizeFilename, extractListingId, canonicalProductKey,
   selectBestProductUrl, resolveSortLayout, rankItems
@@ -97,6 +98,27 @@ const ranked = rankItems([
   { originalIndex: 3, sales: 900, sponsored: true }
 ], "sales-desc");
 assert.deepEqual(ranked.map((item) => item.sales), [500, 300, 100]);
+
+const referenceSignature = {
+  hash: [1, 1, 0, 0, 1, 0, 1, 0],
+  histogram: [0.5, 0.3, 0.2],
+  mask: [1, 1, 0, 0, 1, 0, 1, 0],
+  aspect: 1
+};
+assert.equal(compareSignatures(referenceSignature, referenceSignature), 1);
+const differentSignature = {
+  hash: [0, 0, 1, 1, 0, 1, 0, 1],
+  histogram: [0, 0, 1],
+  mask: [0, 0, 1, 1, 0, 1, 0, 1],
+  aspect: 2
+};
+assert.ok(compareSignatures(referenceSignature, differentSignature) < 0.2);
+const imageRanked = rankItems([
+  { originalIndex: 0, imageSimilarity: 0.42 },
+  { originalIndex: 1, imageSimilarity: 0.91 },
+  { originalIndex: 2, imageSimilarity: null }
+], "image-similarity");
+assert.deepEqual(imageRanked.map((item) => item.imageSimilarity), [0.91, 0.42, null]);
 
 const unchanged = computeObservedTrend([
   { date: "2026-07-01", sales: 1000, salesIsLowerBound: true },

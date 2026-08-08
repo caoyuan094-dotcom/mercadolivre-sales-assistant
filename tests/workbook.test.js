@@ -23,7 +23,8 @@ const items = Array.from({ length: 20 }, (_, index) => ({
   categoryRank: index + 5,
   categoryName: "Carrinhos de Bebês",
   rating: 4.8,
-  reviews: 120
+  reviews: 120,
+  imageSimilarity: 0.95 - index * 0.02
 }));
 
 (async () => {
@@ -52,17 +53,19 @@ const items = Array.from({ length: 20 }, (_, index) => ({
   assert.equal(rankingSheet.getCell("C4").value.text, "测试商品 1");
   assert.equal(rankingSheet.getCell("E4").value.formula, "D4*'关键词前20名'!$E$3");
   assert.equal(rankingSheet.getCell("J4").value, 1);
+  assert.equal(rankingSheet.getCell("K4").value, 0.95);
   assert.equal(rankingSheet.getCell("E2").value, "累计销量档位（从高到低）");
   assert.equal(rankingSheet.getImages().length, 1);
-  assert.deepEqual(rankingSheet.autoFilter, "A3:J23");
+  assert.deepEqual(rankingSheet.autoFilter, "A3:K23");
   assert.equal(sheet.getCell("B2").value, "carrinho de bebê");
   assert.equal(sheet.getCell("A27").value, 20);
   assert.equal(sheet.getCell("K27").value, "未公开");
   assert.equal(sheet.getCell("J8").value.formula, "H8*$E$3");
   assert.equal(sheet.getCell("N8").value, "插件观察 7 天，尚未满30天");
   assert.equal(sheet.getCell("U8").value, "MLB1000000000");
+  assert.equal(sheet.getCell("V8").value, 0.95);
   assert.equal(sheet.getCell("H2").value, "累计销量档位（从高到低）");
   assert.equal(sheet.getImages().length, 1);
-  assert.deepEqual(sheet.autoFilter, "A7:U27");
+  assert.deepEqual(sheet.autoFilter, "A7:V27");
   console.log(`workbook tests passed: ${output}`);
 })();

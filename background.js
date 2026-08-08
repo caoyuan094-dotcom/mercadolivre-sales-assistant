@@ -2,11 +2,20 @@ const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const RATE_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const FETCH_GAP_MS = 500;
 const HISTORY_RETENTION_DAYS = 40;
+const SEARCH_PAGE_GAP_MS = 900;
 
 let nextFetchAt = 0;
+let nextSearchPageAt = 0;
 const inFlightSales = new Map();
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "MLSA_FETCH_SEARCH_PAGE" && isAllowedUrl(message.url)) {
+    fetchSearchPage(message.url)
+      .then(sendResponse)
+      .catch((error) => sendResponse({ status: "error", error: error.message }));
+    return true;
+  }
+
   if (message?.type === "MLSA_FETCH_IMAGE" && isAllowedImageUrl(message.url)) {
     fetchImage(message.url)
       .then(sendResponse)
@@ -29,6 +38,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   return true;
 });
+
+async function fetchSearchPage(url) {
+  const now = Date.now();
+  const delay = Math.max(0, nextSearchPageAt - now);
+  nextSearchPageAt = Math.max(now, nextSearchPageAt) + SEARCH_PAGE_GAP_MS;
+  if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: { "Accept-Language": "pt-BR,pt;q=0.9,es;q=0.8" },
+    redirect: "follow"
+  });
+  if (!response.ok) throw new Error(`搜索页 HTTP ${response.status}`);
+  if (/\/gz\/account-verification|\/login/i.test(response.url)) throw new Error("美客多要求登录或验证账号");
+  return { status: "ok", html: await response.text(), url: response.url };
+}
 
 function isAllowedImageUrl(value) {
   try {

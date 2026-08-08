@@ -17,7 +17,7 @@
 
     buildRankingSheet(rankingSheet, items, imageIds, meta, rate);
 
-    sheet.mergeCells("A1:U1");
+    sheet.mergeCells("A1:V1");
     sheet.getCell("A1").value = `美客多关键词搜索前20名｜${meta.sortLabel || "平台原排序"}`;
     sheet.getCell("A1").font = { bold: true, size: 18, color: { argb: "FFE53935" } };
     sheet.getCell("A1").alignment = { vertical: "middle", horizontal: "center" };
@@ -31,15 +31,15 @@
     sheet.getCell("A4").value = "汇率日期"; sheet.getCell("B4").value = meta.rateDate || "未取得";
     sheet.getCell("D4").value = "汇率来源"; sheet.getCell("E4").value = meta.rateSource || "未取得";
     sheet.getCell("A5").value = "搜索页面"; sheet.getCell("B5").value = { text: meta.sourceUrl, hyperlink: meta.sourceUrl };
-    sheet.mergeCells("B5:U5");
+    sheet.mergeCells("B5:V5");
     sheet.getCell("A6").value = "口径说明"; sheet.getCell("B6").value = "表格第1-20行按本次导出排序排列；累计销量通常为公开档位下限，同档位并列；近30天优先使用平台公开值，否则使用插件快照差值。";
-    sheet.mergeCells("B6:U6");
+    sheet.mergeCells("B6:V6");
 
     const headers = [
       "导出排名", "平台排名", "自然排名", "累计档位排名", "近30天排名", "产品图片", "产品名称",
       "原币价格", "币种", "约合人民币", "累计销量", "累计口径", "近30天/观察增量",
       "30天数据说明", "官方类目排名", "官方类目", "评分", "评价数", "商品链接",
-      "销量数据时间", "刊登ID"
+      "销量数据时间", "刊登ID", "图片相似度"
     ];
     sheet.getRow(7).values = headers;
     sheet.getRow(7).height = 26;
@@ -61,7 +61,8 @@
         sales, item.salesIsLowerBound ? "档位下限（≥）" : item.status === "ok" ? "公开值" : "未取得",
         recent, describeRecent(item), item.categoryRank || null, item.categoryName || null,
         item.rating, item.reviews, { text: item.link, hyperlink: item.link },
-        item.savedAt ? new Date(item.savedAt) : null, item.listingId || null
+        item.savedAt ? new Date(item.savedAt) : null, item.listingId || null,
+        Number.isFinite(item.imageSimilarity) ? item.imageSimilarity : null
       ];
       row.height = 76;
       row.eachCell((cell) => {
@@ -80,7 +81,7 @@
       { width: 11 }, { width: 11 }, { width: 11 }, { width: 14 }, { width: 13 }, { width: 16 }, { width: 45 },
       { width: 14 }, { width: 9 }, { width: 16 }, { width: 14 }, { width: 15 }, { width: 18 },
       { width: 27 }, { width: 14 }, { width: 24 }, { width: 9 }, { width: 11 }, { width: 40 },
-      { width: 19 }, { width: 18 }
+      { width: 19 }, { width: 18 }, { width: 14 }
     ];
     sheet.getColumn(8).numFmt = "#,##0.00";
     sheet.getColumn(10).numFmt = "¥#,##0.00";
@@ -89,9 +90,10 @@
     sheet.getColumn(17).numFmt = "0.0";
     sheet.getColumn(18).numFmt = "#,##0";
     sheet.getColumn(20).numFmt = "yyyy-mm-dd hh:mm";
+    sheet.getColumn(22).numFmt = "0%";
     sheet.getCell("E2").numFmt = "yyyy-mm-dd hh:mm";
     sheet.getCell("E3").numFmt = "0.00000";
-    sheet.autoFilter = { from: "A7", to: `U${7 + items.length}` };
+    sheet.autoFilter = { from: "A7", to: `V${7 + items.length}` };
     sheet.pageSetup = { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
     for (let rowNumber = 1; rowNumber <= 7 + items.length; rowNumber += 1) {
       sheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
@@ -102,7 +104,7 @@
   }
 
   function buildRankingSheet(sheet, items, imageIds, meta, rate) {
-    sheet.mergeCells("A1:J1");
+    sheet.mergeCells("A1:K1");
     sheet.getCell("A1").value = `美客多 ${meta.keyword || "关键词"} 前20名榜单｜${meta.sortLabel || "平台原排序"}`;
     sheet.getCell("A1").font = { bold: true, size: 18, color: { argb: "FFE53935" } };
     sheet.getCell("A1").alignment = { vertical: "middle", horizontal: "center" };
@@ -125,7 +127,7 @@
 
     const headers = [
       "导出排名", "产品图片", "产品名称", "原币价格", "约合人民币",
-      "累计销量", "近30天/观察增量", "累计档位排名", "官方类目排名", "平台排名"
+      "累计销量", "近30天/观察增量", "累计档位排名", "官方类目排名", "平台排名", "图片相似度"
     ];
     sheet.getRow(3).values = headers;
     sheet.getRow(3).height = 27;
@@ -145,7 +147,8 @@
           ? { formula: `D${rowNumber}*'关键词前20名'!$E$3`, result: roundMoney(item.price * rate) }
           : null,
         sales, Number.isFinite(item.recent30) ? item.recent30 : null,
-        item.salesRank || null, item.categoryRank || null, item.platformRank || null
+        item.salesRank || null, item.categoryRank || null, item.platformRank || null,
+        Number.isFinite(item.imageSimilarity) ? item.imageSimilarity : null
       ];
       row.height = 76;
       row.eachCell({ includeEmpty: true }, (cell) => {
@@ -167,13 +170,14 @@
 
     sheet.columns = [
       { width: 11 }, { width: 16 }, { width: 48 }, { width: 14 }, { width: 16 },
-      { width: 14 }, { width: 18 }, { width: 15 }, { width: 15 }, { width: 12 }
+      { width: 14 }, { width: 18 }, { width: 15 }, { width: 15 }, { width: 12 }, { width: 14 }
     ];
     sheet.getColumn(4).numFmt = "#,##0.00";
     sheet.getColumn(5).numFmt = "¥#,##0.00";
     sheet.getColumn(6).numFmt = "#,##0";
     sheet.getColumn(7).numFmt = "#,##0";
-    sheet.autoFilter = { from: "A3", to: `J${3 + items.length}` };
+    sheet.getColumn(11).numFmt = "0%";
+    sheet.autoFilter = { from: "A3", to: `K${3 + items.length}` };
     sheet.pageSetup = { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
     for (let rowNumber = 1; rowNumber <= 3 + items.length; rowNumber += 1) {
       sheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {

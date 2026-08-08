@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "美客多销量助手",
-  "version": "1.3.5",
-  "description": "显示美客多累计销量档位、近30天公开销量或快照增量、人民币换算、准确排名并导出Excel。",
+  "version": "1.4.0",
+  "description": "显示美客多销量、30天趋势、人民币换算，并支持本地图搜相似款与Excel导出。",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://*.mercadolivre.com.br/*",
@@ -33,7 +33,7 @@
         "https://*.mercadolibre.com.co/*",
         "https://*.mercadolibre.com.pe/*"
       ],
-      "js": ["vendor/exceljs.min.js", "currency.js", "export-utils.js", "excel-export.js", "content.js"],
+      "js": ["vendor/exceljs.min.js", "currency.js", "export-utils.js", "image-similarity.js", "excel-export.js", "content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }

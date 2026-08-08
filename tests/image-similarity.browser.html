@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Image similarity browser test</title>
+<style>
+  body { font: 16px system-ui; margin: 32px; }
+  canvas { margin-right: 16px; border: 1px solid #ccc; }
+  #result { margin-top: 20px; font-weight: 700; }
+</style>
+<canvas id="reference" width="160" height="160"></canvas>
+<canvas id="same" width="160" height="160"></canvas>
+<canvas id="different" width="160" height="160"></canvas>
+<div id="result">Running…</div>
+<script src="../image-similarity.js"></script>
+<script>
+  function drawProduct(canvas, color, shape) {
+    const context = canvas.getContext("2d");
+    context.fillStyle = "white";
+    context.fillRect(0, 0, 160, 160);
+    context.fillStyle = color;
+    if (shape === "circle") {
+      context.beginPath();
+      context.arc(80, 80, 52, 0, Math.PI * 2);
+      context.fill();
+    } else {
+      context.fillRect(25, 55, 110, 50);
+    }
+  }
+  drawProduct(reference, "#e53935", "circle");
+  drawProduct(same, "#e53935", "circle");
+  drawProduct(different, "#1565c0", "square");
+  Promise.all([
+    MLSAImageSimilarity.createSignature(reference.toDataURL()),
+    MLSAImageSimilarity.createSignature(same.toDataURL()),
+    MLSAImageSimilarity.createSignature(different.toDataURL())
+  ]).then(([a, b, c]) => {
+    const sameScore = MLSAImageSimilarity.compareSignatures(a, b);
+    const differentScore = MLSAImageSimilarity.compareSignatures(a, c);
+    result.dataset.same = sameScore;
+    result.dataset.different = differentScore;
+    result.textContent = `same=${sameScore.toFixed(3)} different=${differentScore.toFixed(3)}`;
+  });
+</script>
